@@ -9,7 +9,7 @@ import gzip
 import os
 import re
 
-Metadata = namedtuple('Metadata', ['cloud', 'region', 'version'])
+Record = namedtuple('Record', ['uuid', 'cloud', 'region', 'version'])
 
 
 logs = [
@@ -39,9 +39,9 @@ def find_metadata(l):
     c = re.search(cloud_re, l)
     cr = re.search(region_re, l)
     v = re.search(version_re, l)
-    cloud = None
-    region = None
-    version = None
+    cloud = 'pre-2'
+    region = 'pre-2'
+    version = 'pre-2'
 
     if c:
         _, cloud = c.group().split('=')
@@ -51,10 +51,8 @@ def find_metadata(l):
 
     if v:
         _, version = v.group().split('=')
-    else:
-        versions['pre-2'].add(uuid)
 
-    return Metadata(cloud, region, version)
+    return (cloud, region, version)
 
 
 for g in logs:
@@ -75,20 +73,17 @@ for g in logs:
         for l in lines:
             uuid = find_uuid(l)
             if uuid:
-                running[week].add(uuid)
                 meta = find_metadata(l)
+                record = Record(uuid, meta[0], meta[1], meta[2])
 
                 # Add that we saw this uuid this week.
-                running[week].add(uuid)
+                running[week].add(record.uuid)
+                clouds[record.cloud].add(uuid)
+                if not cloud_regions[record.cloud]:
+                    cloud_regions[record.cloud] = defaultdict(set)
+                cloud_regions[record.cloud][record.region].add(uuid)
 
-                # build the metadata dictionaries
-                clouds[meta.cloud].add(uuid)
-
-                if not cloud_regions[meta.cloud]:
-                    cloud_regions[meta.cloud] = defaultdict(set)
-                cloud_regions[meta.cloud][meta.region].add(uuid)
-
-                versions[meta.version].add(uuid)
+                versions[record.version].add(uuid)
 
 
 def output_clouds(clouds):

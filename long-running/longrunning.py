@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 
-import datetime
+from datetime import datetime
 from collections import defaultdict
 from collections import namedtuple
 import glob
@@ -55,37 +55,6 @@ def find_metadata(l):
     return (cloud, region, version)
 
 
-for g in logs:
-    print "Found logs {0}".format(len(g))
-    for path in g:
-        print "Processing: {0}".format(path)
-        logname = os.path.basename(path)
-        datestr = logname.\
-            replace('api.jujucharms.com.log-', '').\
-            replace('.anon.gz', '')
-        week = datetime.datetime.strptime(datestr, '%Y%m%d').isocalendar()[1]
-        with gzip.open(path) as f:
-            lines = f.read().split("\n")
-
-        if week not in running:
-            running[week] = set()
-
-        for l in lines:
-            uuid = find_uuid(l)
-            if uuid:
-                meta = find_metadata(l)
-                record = Record(uuid, meta[0], meta[1], meta[2])
-
-                # Add that we saw this uuid this week.
-                running[week].add(record.uuid)
-                clouds[record.cloud].add(uuid)
-                if not cloud_regions[record.cloud]:
-                    cloud_regions[record.cloud] = defaultdict(set)
-                cloud_regions[record.cloud][record.region].add(uuid)
-
-                versions[record.version].add(uuid)
-
-
 def output_clouds(clouds):
     print "Clouds"
     sorted_clouds = sorted([(k, v) for k, v in clouds.items()])
@@ -110,7 +79,40 @@ def output_versions(version):
         print "    ", k, len(v)
 
 
+def process_log_line(l, week):
+    uuid = find_uuid(l)
+    if uuid:
+        meta = find_metadata(l)
+        record = Record(uuid, meta[0], meta[1], meta[2])
+
+        # Add that we saw this uuid this week.
+        running[week].add(record.uuid)
+        clouds[record.cloud].add(uuid)
+        if not cloud_regions[record.cloud]:
+            cloud_regions[record.cloud] = defaultdict(set)
+        cloud_regions[record.cloud][record.region].add(uuid)
+
+        versions[record.version].add(uuid)
+
+
 def main():
+    for g in logs:
+        print "Found logs {0}".format(len(g))
+        for path in g:
+            print "Processing: {0}".format(path)
+            logname = os.path.basename(path)
+            datestr = logname.\
+                replace('api.jujucharms.com.log-', '').\
+                replace('.anon.gz', '')
+            week = datetime.strptime(datestr, '%Y%m%d').isocalendar()[1]
+            with gzip.open(path) as f:
+                lines = f.read().split("\n")
+
+            if week not in running:
+                running[week] = set()
+
+            for l in lines:
+                process_log_line(l, week)
 
     print "Long running models"
     for k in running:

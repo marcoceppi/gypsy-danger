@@ -114,6 +114,12 @@ def main():
             for l in lines:
                 process_log_line(l, week)
 
+    unique_uuids = set()
+    for w in running.values():
+        unique_uuids.update(w)
+    print "Total UUIDs"
+    print len(unique_uuids)
+
     print "Long running models"
     for k in running:
         prev = set()

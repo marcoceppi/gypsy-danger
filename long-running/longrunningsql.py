@@ -121,14 +121,6 @@ def output_regions(cloud_regions):
     #         print("    ", k, len(v))
 
 
-def output_versions(version):
-    print("Versions")
-    # sortedversions = sorted([(k, v) for k, v in version.items()])
-    #
-    # for k, v in sortedversions:
-    #     print("    ", k, len(v))
-
-
 def count_uuids(conn, day=None):
     c = conn.cursor()
     sql = "SELECT COUNT(models.uuid) from models"
@@ -141,6 +133,28 @@ def count_uuids(conn, day=None):
     else:
         res = c.execute(sql)
     return res.fetchone()[0]
+
+
+def count_versions(conn, day=None):
+    c = conn.cursor()
+    add_and = ''
+    if day:
+        add_and = 'AND model_hits.day=?'
+
+    sql = """
+        SELECT COUNT(models.uuid), version from models
+        INNER JOIN model_hits
+        WHERE models.uuid=model_hits.uuid {}
+        GROUP BY version
+        ORDER BY version;
+    """
+    sql = sql.format(add_and)
+
+    if day:
+        res = c.execute(sql, [day])
+    else:
+        res = c.execute(sql)
+    return res.fetchall()
 
 
 def _get_latest_day(conn):
@@ -158,6 +172,15 @@ def output_latest_day_uuids(conn):
     day = _get_latest_day(conn)
     count = count_uuids(conn, day=day)
     print("\n\n{} saw {} unique models".format(day, count))
+
+
+def output_latest_day_versions(conn):
+    day = _get_latest_day(conn)
+    versions = count_versions(conn, day=day)
+    print("\n\n{} saw:".format(day))
+    print("Version\tCount")
+    for row in versions:
+        print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
 
 
 def output_model_ages(conn, day):
@@ -226,6 +249,7 @@ def main(init_db):
     output_latest_day_uuids(conn)
     output_model_ages(conn, _get_latest_day(conn))
     output_models_per_day(conn)
+    output_latest_day_versions(conn)
 
 
 if __name__ == '__main__':

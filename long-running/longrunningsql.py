@@ -9,8 +9,8 @@ import sqlite3
 
 
 logs = [
-    glob.glob('../logs/api/1/api.jujucharms.com.log-201*'),
-    glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
+    glob.glob('logs/api/1/api.jujucharms.com.log-201*'),
+    glob.glob('logs/api/2/api.jujucharms.com.log-201*'),
 ]
 
 uuid_re = b'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'
@@ -197,8 +197,7 @@ def output_models_per_day(conn):
 
 @click.command()
 @click.option('--init-db', flag_value=True, help='Init the sqlite db')
-def main(init_db=False):
-
+def main(init_db):
     conn = connect_sql()
     if init_db:
         recreate_db()

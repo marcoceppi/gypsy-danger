@@ -1,27 +1,16 @@
 #!/usr/bin/env python3
 
 import click
-from collections import (
-    defaultdict,
-    namedtuple,
-    OrderedDict,
-)
-from datetime import datetime
 import glob
 import gzip
 import os
 import re
 import sqlite3
 
-Record = namedtuple('Record', ['uuid', 'cloud', 'region', 'version'])
 
 logs = [
-    glob.glob('../logs/api/1/api.jujucharms.com.log-201610'),
-    # glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
-]
-logs = [
-    glob.glob('logs/api/1/api.jujucharms.com.log-201610*'),
-    # glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
+    glob.glob('../logs/api/1/api.jujucharms.com.log-201*'),
+    glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
 ]
 
 uuid_re = b'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'
@@ -109,14 +98,10 @@ def process_log_line(l, date, conn):
             # Add this as a first entry for this model uuid
             c.execute('''
                 INSERT INTO models (uuid,version,cloud,region)
-                VALUES (?, ?, ?, ?);''',
-                [uuid, meta[0], meta[1], meta[2]])
+                VALUES (?, ?, ?, ?);''', [uuid, meta[0], meta[1], meta[2]])
         c.execute('''
             INSERT OR REPLACE INTO model_hits (uuid,day)
-            VALUES (?, ?);''',
-            [uuid, date])
-
-
+            VALUES (?, ?);''', [uuid, date])
 
 
 def output_clouds(clouds):
@@ -156,6 +141,7 @@ def count_uuids(conn, day=None):
     else:
         res = c.execute(sql)
     return res.fetchone()[0]
+
 
 def _get_latest_day(conn):
     c = conn.cursor()
@@ -241,41 +227,6 @@ def main(init_db=False):
     output_latest_day_uuids(conn)
     output_model_ages(conn, _get_latest_day(conn))
     output_models_per_day(conn)
-
-    # unique_uuids = set()
-    # for w in running.values():
-    #     unique_uuids.update(w)
-    # print("Total UUIDs: {}", len(unique_uuids))
-    #
-    # print("Cloud and Version info")
-    # for datestr, week in week_list.items():
-    #     print(datestr)
-    #     output_clouds(clouds[datestr])
-    #     output_regions(cloud_regions[datestr])
-    #     output_versions(versions[datestr])
-    #
-    # print("Long running models")
-    # print("Week    \tCount\tRepeats")
-    # for datestr, week in week_list.items():
-    #     prev = set()
-    #
-    #     if week == 1:
-    #         # Only 52 weeks in a year so if we hit week one time to go back to
-    #         # the last week of the year for our numbers.
-    #         prev1 = 52
-    #     else:
-    #         prev1 = week-1
-    #
-    #     if prev1 in week_list.values():
-    #         for ds, w in week_list.items():
-    #             if w == prev1:
-    #                 datestr1 = ds
-    #         prev = running[datestr1]
-    #         prev.intersection_update(running[datestr])
-    #         print(datestr, "\t", len(running[datestr]), "\t", len(prev))
-    #     else:
-    #         # Let it go
-    #         pass
 
 
 if __name__ == '__main__':

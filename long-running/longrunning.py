@@ -133,7 +133,6 @@ def main():
             for l in lines:
                 process_log_line(l, running_datestr)
 
-
     unique_uuids = set()
     for w in running.values():
         unique_uuids.update(w)
@@ -142,7 +141,7 @@ def main():
 
     print "Cloud and Version info"
     print "Week    \tCount\tRepeats"
-    for datestr, week in week_list.iteritems():
+    for datestr, week in week_list.items():
         print datestr
         output_clouds(clouds[datestr])
         output_regions(cloud_regions[datestr])
@@ -150,7 +149,7 @@ def main():
 
     print "Long running models"
     print "Week    \tCount\tRepeats"
-    for datestr, week in week_list.iteritems():
+    for datestr, week in week_list.items():
         prev = set()
 
         if week == 1:

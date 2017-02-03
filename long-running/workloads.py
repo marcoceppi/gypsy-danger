@@ -7,8 +7,8 @@ import gzip
 import re
 
 logs = [
-    glob.glob('../logs/api/1/api.jujucharms.com.log-2016*'),
-    glob.glob('../logs/api/2/api.jujucharms.com.log-2016*'),
+    glob.glob('../logs/api/1/api.jujucharms.com.log-201*'),
+    glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
 ]
 
 uuid_re = 'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'

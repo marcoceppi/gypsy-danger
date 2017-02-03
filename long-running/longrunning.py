@@ -4,6 +4,7 @@
 from datetime import datetime
 from collections import defaultdict
 from collections import namedtuple
+from collections import OrderedDict
 import glob
 import gzip
 import os
@@ -11,18 +12,17 @@ import re
 
 Record = namedtuple('Record', ['uuid', 'cloud', 'region', 'version'])
 
-
 logs = [
-    glob.glob('../logs/api/1/api.jujucharms.com.log-2016*'),
-    glob.glob('../logs/api/2/api.jujucharms.com.log-2016*'),
+    glob.glob('../logs/api/1/api.jujucharms.com.log-201*'),
+    glob.glob('../logs/api/2/api.jujucharms.com.log-201*'),
 ]
 uuid_re = 'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'
 cloud_re = 'provider=[^,\"]*'
 region_re = 'cloud_region=[^,\"]*'
 version_re = 'controller_version=[^,\"]*'
-clouds = defaultdict(set)
-cloud_regions = defaultdict(set)
-versions = defaultdict(set)
+clouds = {}
+cloud_regions = {}
+versions = {}
 running = {}
 
 
@@ -74,7 +74,8 @@ def output_regions(cloud_regions):
 
 def output_versions(version):
     print "Versions"
-    sortedversions = sorted([(k, v) for k, v in versions.items()])
+    sortedversions = sorted([(k, v) for k, v in version.items()])
+
     for k, v in sortedversions:
         print "    ", k, len(v)
 
@@ -87,15 +88,27 @@ def process_log_line(l, week):
 
         # Add that we saw this uuid this week.
         running[week].add(record.uuid)
-        clouds[record.cloud].add(uuid)
-        if not cloud_regions[record.cloud]:
-            cloud_regions[record.cloud] = defaultdict(set)
-        cloud_regions[record.cloud][record.region].add(uuid)
+        if week not in clouds:
+            clouds[week] = defaultdict(set)
+        clouds[week][record.cloud].add(uuid)
 
-        versions[record.version].add(uuid)
+        if week not in cloud_regions:
+            cloud_regions[week] = defaultdict(set)
+        if not cloud_regions[week][record.cloud]:
+            cloud_regions[week][record.cloud] = defaultdict(set)
+        cloud_regions[week][record.cloud][record.region].add(uuid)
+
+        if week not in versions:
+            versions[week] = defaultdict(set)
+        versions[week][record.version].add(uuid)
 
 
 def main():
+    week_list = OrderedDict()
+    # Track the datestr for the running week.It should be the sunday of the
+    # week and we reuse that for each day in that week to group/aggregate the
+    # weeks.
+    running_datestr = ''
     for g in logs:
         print "Found logs {0}".format(len(g))
         for path in g:
@@ -105,14 +118,21 @@ def main():
                 replace('api.jujucharms.com.log-', '').\
                 replace('.anon.gz', '')
             week = datetime.strptime(datestr, '%Y%m%d').isocalendar()[1]
+
             with gzip.open(path) as f:
                 lines = f.read().split("\n")
 
-            if week not in running:
-                running[week] = set()
+            if week not in week_list.values():
+                # We've hit a new numerical week (1-52) so we need to update
+                # the running datestr to this new sunday date and make sure we
+                # log we've seen this week under this datestr.
+                running_datestr = datestr
+                week_list[datestr] = week
+                running[running_datestr] = set()
 
             for l in lines:
-                process_log_line(l, week)
+                process_log_line(l, running_datestr)
+
 
     unique_uuids = set()
     for w in running.values():
@@ -120,20 +140,36 @@ def main():
     print "Total UUIDs"
     print len(unique_uuids)
 
+    print "Cloud and Version info"
+    print "Week    \tCount\tRepeats"
+    for datestr, week in week_list.iteritems():
+        print datestr
+        output_clouds(clouds[datestr])
+        output_regions(cloud_regions[datestr])
+        output_versions(versions[datestr])
+
     print "Long running models"
-    for k in running:
+    print "Week    \tCount\tRepeats"
+    for datestr, week in week_list.iteritems():
         prev = set()
 
-        if k-2 in running:
-            prev = running[k-2]
-        if k-1 in running:
-            prev = prev | running[k-1]
-        prev.intersection_update(running[k])
-        print'Week ', k, len(running[k]), len(prev)
+        if week == 1:
+            # Only 52 weeks in a year so if we hit week one time to go back to
+            # the last week of the year for our numbers.
+            prev1 = 52
+        else:
+            prev1 = week-1
 
-    output_clouds(clouds)
-    output_regions(cloud_regions)
-    output_versions(versions)
+        if prev1 in week_list.values():
+            for ds, w in week_list.items():
+                if w == prev1:
+                    datestr1 = ds
+            prev = running[datestr1]
+            prev.intersection_update(running[datestr])
+            print datestr, "\t", len(running[datestr]), "\t", len(prev)
+        else:
+            # Let it go
+            pass
 
 
 if __name__ == "__main__":

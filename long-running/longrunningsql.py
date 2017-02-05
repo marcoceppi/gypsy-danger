@@ -104,16 +104,6 @@ def process_log_line(l, date, conn):
             VALUES (?, ?);''', [uuid, date])
 
 
-def output_regions(cloud_regions):
-    print("Regions")
-    # sorted_cloud_regions = sorted([(k, v) for k, v in cloud_regions.items()])
-    # for cloud, regions in sorted_cloud_regions:
-    #     sorted_regions = sorted([(k, v) for k, v in regions.items()])
-    #     print("  ", cloud)
-    #     for k, v in sorted_regions:
-    #         print("    ", k, len(v))
-
-
 def count_uuids(conn, day=None):
     c = conn.cursor()
     sql = "SELECT COUNT(models.uuid) from models"
@@ -172,6 +162,28 @@ def count_clouds(conn, day=None):
     return res.fetchall()
 
 
+def count_cloud_regions(conn, day=None):
+    c = conn.cursor()
+    add_and = ''
+    if day:
+        add_and = 'AND model_hits.day=?'
+
+    sql = """
+        SELECT COUNT(models.uuid), cloud, region from models
+        INNER JOIN model_hits
+        WHERE models.uuid=model_hits.uuid {}
+        GROUP BY cloud, region
+        ORDER BY cloud, region;
+    """
+    sql = sql.format(add_and)
+
+    if day:
+        res = c.execute(sql, [day])
+    else:
+        res = c.execute(sql)
+    return res.fetchall()
+
+
 def _get_latest_day(conn):
     c = conn.cursor()
     sql = "SELECT day FROM model_hits ORDER BY day DESC LIMIT 1;"
@@ -205,6 +217,19 @@ def output_latest_day_clouds(conn):
     print("Count\tCloud")
     for row in clouds:
         print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
+
+
+def output_latest_day_cloud_regions(conn):
+    day = _get_latest_day(conn)
+    clouds = count_cloud_regions(conn, day=day)
+    print("\n\n{} saw:".format(day))
+    print("Count\tCloud")
+    cloud = None
+    for row in clouds:
+        if cloud != row[1]:
+            print('Cloud: ', row[1].decode('utf-8'))
+            cloud = row[1]
+        print("\t{0}\t{1}".format(row[0], row[2].decode('utf-8')))
 
 
 def output_model_ages(conn, day):
@@ -275,6 +300,7 @@ def main(init_db):
     output_models_per_day(conn)
     output_latest_day_versions(conn)
     output_latest_day_clouds(conn)
+    output_latest_day_cloud_regions(conn)
 
 
 if __name__ == '__main__':

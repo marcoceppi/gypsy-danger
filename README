@@ -9,6 +9,7 @@ to the charmstore logs via swift.
 
   make sysdeps
   make
+  source ~/path/to/novarc/for/swift
   make get-logs
   make _initdb
   make longrunning

@@ -49,6 +49,34 @@ lint: bin/flake8
 	flake8 long-running
 
 
+###
+# Long running setup
+###
+.PHONY: get-logs
+get-logs: logs/api/1 logs/api/2
+	swift list production-juju-ps45-cdo-jujucharms-machine-1.canonical.com G 201610 G api.jujucharms.com.log > logs/api/logs1.list
+	swift list production-juju-ps45-cdo-jujucharms-machine-2.canonical.com G 201610 G api.jujucharms.com.log > logs/api/logs2.list
+	echo "Downloading log files using get.sh"
+	cd logs/api && ./get.sh
+
+logs/api/1:
+	mkdir -p logs/api/1
+logs/api/2:
+	mkdir -p logs/api/2
+
+
+.PHONY: _initdb
+_initdb:
+	$(PY) long-running/longrunning.py initdb
+
+.PHONY: longrunning
+longrunning:
+	$(PY) long-running/longrunning.py run summary
+	$(PY) long-running/longrunning.py run latest-summary
+	$(PY) long-running/longrunning.py run model-ages
+	$(PY) long-running/longrunning.py run models-per-
+
+
 # .PHONY: deps
 # deps: venv
 # 	$(PIP) install -r requirements.txt

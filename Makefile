@@ -5,25 +5,12 @@ PIP := bin/pip
 PEP8 := bin/pep8
 PYTEST := bin/py.test
 
-# ###########
-# Tests rule!
-# ###########
-# .PHONY: test
-# test: venv develop $(PYTEST)
-# 	$(PYTEST) -q --tb native -s tests
-#
-# .PHONY: test-coverage
-# test-coverage: venv develop $(PYTEST)
-# 	$(PYTEST) -q --cov breadability tests
-#
-# $(PYTEST):
-# 	$(PIP) install -r requirements.txt
 
 # #######
 # INSTALL
 # #######
 .PHONY: all
-all: venv deps develop
+all: sysdeps venv
 
 .PHONY: clean-all
 clean-all: clean_venv
@@ -32,10 +19,17 @@ clean-all: clean_venv
     fi
 
 
+sysdeps:
+	sudo apt-get install python3-dev
+
+
 venv: bin/python
 bin/python:
+	# needs python3-dev to build keystoneclient deps
 	virtualenv -p /usr/bin/python3 .
 	bin/pip install click
+	bin/pip install python-swiftclient
+	bin/pip install python-keystoneclient
 
 .PHONY: clean_venv
 clean_venv:
@@ -52,10 +46,15 @@ lint: bin/flake8
 ###
 # Long running setup
 ###
+check-swift:
+ifndef NOVA_USERNAME
+    $(error NOVA_USERNAME is undefined, source your swift cred file.)
+endif
+
 .PHONY: get-logs
-get-logs: logs/api/1 logs/api/2
-	swift list production-juju-ps45-cdo-jujucharms-machine-1.canonical.com G 201610 G api.jujucharms.com.log > logs/api/logs1.list
-	swift list production-juju-ps45-cdo-jujucharms-machine-2.canonical.com G 201610 G api.jujucharms.com.log > logs/api/logs2.list
+get-logs: logs/api/1 logs/api/2 check-swift
+	swift list production-juju-ps45-cdo-jujucharms-machine-1.canonical.com | grep  201 | grep api.jujucharms.com.log > logs/api/logs1.list
+	swift list production-juju-ps45-cdo-jujucharms-machine-2.canonical.com | grep 201 | grep api.jujucharms.com.log > logs/api/logs2.list
 	echo "Downloading log files using get.sh"
 	cd logs/api && ./get.sh
 
@@ -78,30 +77,3 @@ longrunning:
 	$(PY) long-running/longrunning.py run latest-versions
 	$(PY) long-running/longrunning.py run latest-clouds
 	$(PY) long-running/longrunning.py run latest-clouds-regions
-
-
-# .PHONY: deps
-# deps: venv
-# 	$(PIP) install -r requirements.txt
-
-
-# .PHONY: develop
-# develop: lib/python*/site-packages/breadability.egg-link
-# lib/python*/site-packages/breadability.egg-link:
-# 	$(PY) setup.py develop
-
-
-# # ###########
-# # Deploy
-# # ###########
-# .PHONY: dist
-# dist:
-# 	$(PY) setup.py sdist
-#
-# .PHONY: upload
-# upload:
-# 	$(PY) setup.py sdist upload
-#
-# .PHONY: version_update
-# version_update:
-# 	$(EDITOR) setup.py CHANGELOG.rst

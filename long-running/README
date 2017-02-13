@@ -1,0 +1,11 @@
+In order to load the long running model data you need access to the apache
+logs for Jujucharm.com and there are two servers there.
+
+Getting the logs
+
+- get the credentials for the swift bucket from enigma (or webops ticket first)
+- get the python-swiftclient (apt-get install python-swift)
+- source the credential file
+- make get-logs
+- make _initdb
+- make longrunning

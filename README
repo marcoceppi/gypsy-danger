@@ -1,0 +1,16 @@
+Pull various Juju KPI data in and report on it
+=====
+
+Long running instance data
+------
+
+You need to get the log files onto the system. For this you need credentials
+to the charmstore logs via swift.
+
+  make sysdeps
+  make
+  source ~/path/to/novarc/for/swift
+  make get-logs
+  make _initdb
+  make longrunning
+

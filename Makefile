@@ -74,7 +74,10 @@ longrunning:
 	$(PY) long-running/longrunning.py run summary
 	$(PY) long-running/longrunning.py run latest-summary
 	$(PY) long-running/longrunning.py run model-ages
-	$(PY) long-running/longrunning.py run models-per-
+	$(PY) long-running/longrunning.py run models-per-day
+	$(PY) long-running/longrunning.py run latest-versions
+	$(PY) long-running/longrunning.py run latest-clouds
+	$(PY) long-running/longrunning.py run latest-clouds-regions
 
 
 # .PHONY: deps

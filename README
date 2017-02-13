@@ -7,5 +7,9 @@ Long running instance data
 You need to get the log files onto the system. For this you need credentials
 to the charmstore logs via swift.
 
+  make sysdeps
   make
+  make get-logs
+  make _initdb
+  make longrunning
 

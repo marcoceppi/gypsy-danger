@@ -28,12 +28,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 def connect_sql():
-    conn = sqlite3.connect('models.db')
+    conn = sqlite3.connect(DB_NAME)
     return conn
 
 
 def recreate_db():
-    """Simple program that greets NAME for a total of COUNT times."""
+    """Drop tables and recreate them to reset the sqlite db."""
     conn = connect_sql()
     c = conn.cursor()
     # drop tables if they exist

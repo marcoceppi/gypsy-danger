@@ -1,16 +1,16 @@
 # Makefile to help automate tasks
 WD := $(shell pwd)
-PY := bin/python
-PIP := bin/pip
-PEP8 := bin/pep8
-PYTEST := bin/py.test
+PY := .venv/bin/python
+PIP := .venv/bin/pip
+PEP8 := .venv/bin/pep8
+PYTEST := .venvbin/py.test
 
 
 # #######
 # INSTALL
 # #######
 .PHONY: all
-all: sysdeps venv
+all: sysdeps .venv
 
 .PHONY: clean-all
 clean-all: clean_venv
@@ -23,23 +23,23 @@ sysdeps:
 	sudo apt-get install python3-dev
 
 
-venv: bin/python
-bin/python:
+.venv: .venv/bin/python
+.venv/bin/python:
 	# needs python3-dev to build keystoneclient deps
-	virtualenv -p /usr/bin/python3 .
-	bin/pip install click
-	bin/pip install python-swiftclient
-	bin/pip install python-keystoneclient
+	virtualenv -p /usr/bin/python3 .venv
+	.venv/bin/pip install click
+	.venv/bin/pip install python-swiftclient
+	.venv/bin/pip install python-keystoneclient
 
 .PHONY: clean_venv
 clean_venv:
 	rm -rf bin include lib local man share
 
 
-bin/flake8: venv
-	bin/pip install flake8
+.venv/bin/flake8: .venv
+	.venv/bin/pip install flake8
 
-lint: bin/flake8
+lint: .venv/bin/flake8
 	flake8 long-running
 
 
@@ -52,7 +52,7 @@ ifndef NOVA_USERNAME
 endif
 
 .PHONY: get-logs
-get-logs: logs/api/1 logs/api/2 check-swift
+get-logs: .venv logs/api/1 logs/api/2 check-swift
 	swift list production-juju-ps45-cdo-jujucharms-machine-1.canonical.com | grep  201 | grep api.jujucharms.com.log > logs/api/logs1.list
 	swift list production-juju-ps45-cdo-jujucharms-machine-2.canonical.com | grep 201 | grep api.jujucharms.com.log > logs/api/logs2.list
 	echo "Downloading log files using get.sh"
@@ -65,11 +65,11 @@ logs/api/2:
 
 
 .PHONY: _initdb
-_initdb:
+_initdb: .venv
 	$(PY) long-running/longrunning.py initdb
 
 .PHONY: longrunning
-longrunning:
+longrunning: .venv
 	$(PY) long-running/longrunning.py run summary
 	$(PY) long-running/longrunning.py run latest-summary
 	$(PY) long-running/longrunning.py run model-ages

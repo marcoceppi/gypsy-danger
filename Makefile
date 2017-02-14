@@ -3,7 +3,8 @@ WD := $(shell pwd)
 PY := .venv/bin/python
 PIP := .venv/bin/pip
 PEP8 := .venv/bin/pep8
-PYTEST := .venvbin/py.test
+PYTEST := .venv/bin/py.test
+FLAKE8 := .venv/bin/flake8
 
 
 # #######
@@ -27,9 +28,9 @@ sysdeps:
 .venv/bin/python:
 	# needs python3-dev to build keystoneclient deps
 	virtualenv -p /usr/bin/python3 .venv
-	.venv/bin/pip install click
-	.venv/bin/pip install python-swiftclient
-	.venv/bin/pip install python-keystoneclient
+	$(PIP) install click
+	$(PIP) install python-swiftclient
+	$(PIP) install python-keystoneclient
 
 .PHONY: clean_venv
 clean_venv:
@@ -37,10 +38,10 @@ clean_venv:
 
 
 .venv/bin/flake8: .venv
-	.venv/bin/pip install flake8
+	$(PIP) install flake8
 
 lint: .venv/bin/flake8
-	flake8 long-running
+	$(FLAKE8) long-running
 
 
 ###

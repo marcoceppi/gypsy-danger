@@ -39,9 +39,9 @@ def find_app(l):
 def main():
 
     for g in logs:
-        print "Found logs {0}".format(len(g))
+        print("Found logs {0}".format(len(g)))
         for path in g:
-            print "Processing: {0}".format(path)
+            print("Processing: {0}".format(path))
             with gzip.open(path) as f:
                 lines = f.read().split("\n")
 
@@ -50,14 +50,14 @@ def main():
                 if uuid:
                     apps[uuid].append(find_app(l))
 
-    print "Found UUIDs"
-    print len(apps.keys())
+    print("Found UUIDs")
+    print(len(apps.keys()))
     count_me = 'cs%3A~containers%2Fkubernetes-master'
     final = []
-    for uuid, found in apps.iteritems():
+    for uuid, found in apps.items():
         if count_me in found:
             final.append(uuid)
-    print len(final)
+    print(len(final))
 
 
 if __name__ == "__main__":

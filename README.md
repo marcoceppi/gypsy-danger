@@ -40,10 +40,10 @@ against the log data that's been pulled down and put parsed with `_initdb`.
   long-running/longrunning.py run latest-clouds-regions
 
 
- - summary: how many models have we seen in the db
- - latest-summary: for the latest day, how many models were seen
- - model-ages: for all model uuids found how many days old are they
- - models-per-day: for each day how many models were seen on each day
- - latest-versions: for the latest day, how many models are on which versions of Juju
- - latest-clouds: for the latest day, what clouds were those models on
- - latest-clouds-regions: latest-clouds with a breakdown per region of the cloud
+- summary: how many models have we seen in the db 
+- latest-summary: for the latest day, how many models were seen
+- model-ages: for all model uuids found how many days old are they
+- models-per-day: for each day how many models were seen on each day
+- latest-versions: for the latest day, how many models are on which versions of Juju
+- latest-clouds: for the latest day, what clouds were those models on
+- latest-clouds-regions: latest-clouds with a breakdown per region of the cloud

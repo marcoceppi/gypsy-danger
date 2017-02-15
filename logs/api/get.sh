@@ -13,14 +13,23 @@ cd 1
 for f in $FILES
 do
   echo "swift download $f"
-  swift download production-juju-ps45-cdo-jujucharms-machine-1.canonical.com $f
+  if [ ! -f $f ]; then
+      swift download production-juju-ps45-cdo-jujucharms-machine-1.canonical.com $f
+  else
+      echo "File already available: $f"
+  fi
 done
 
 cd ..
+
 FILES=`cat logs2.list`
 cd 2
 for f in $FILES
 do
   echo "swift download $f"
-  swift download production-juju-ps45-cdo-jujucharms-machine-2.canonical.com $f
+  if [ ! -f $f ]; then
+      swift download production-juju-ps45-cdo-jujucharms-machine-2.canonical.com $f
+  else
+      echo "File already available: $f"
+  fi
 done

@@ -65,6 +65,51 @@ def recreate_db():
     conn.commit()
 
 
+def load_logfiles():
+    conn = connect_sql()
+
+    for g in logs:
+        print("Found logs {0}".format(len(g)))
+        for path in g:
+            print("Processing: {0}".format(path))
+            path_parts = path.split('/')
+            logname = os.path.basename(path)
+
+            datestr = logname.\
+                replace('api.jujucharms.com.log-', '').\
+                replace('.anon.gz', '')
+
+            c = conn.cursor()
+            res = c.execute('''
+                SELECT * FROM loaded_logs
+                WHERE logfile = ?
+            ''', ['/'.join([path_parts[-2], logname]),])
+            found = res.fetchone()
+
+            if found:
+                print('Skipping loaded logfile {}'.format(logname))
+                continue
+
+            c.execute('''INSERT INTO loaded_logs (
+                        logfile, started, finished) VALUES (
+                        ?, ?, ?
+                        )''', ['/'.join([path_parts[-2], logname]),
+                               True,
+                               False])
+            conn.commit()
+
+            with gzip.open(path) as f:
+                for line in f:
+                    if '\n' == line[-1]:
+                        line = line[:-1]
+                    process_log_line(line, datestr, conn)
+            c.execute('''UPDATE loaded_logs
+                        SET finished=?
+                        WHERE logfile=?''',
+                      [True, path])
+        conn.commit()
+
+
 def find_uuid(l):
     m = re.search(uuid_re, l)
     if m:
@@ -281,41 +326,15 @@ def cli():
     pass
 
 
+@cli.command(help="Load new log files that are found from get_logs.")
+def updatedb(*args, **kwargs):
+    load_logfiles()
+
+
 @cli.command(help="Drop the DB and recreate from log files")
-def initdb():
-    conn = connect_sql()
+def initdb(*args, **kwargs):
     recreate_db()
-
-    for g in logs:
-        print("Found logs {0}".format(len(g)))
-        for path in g:
-            print("Processing: {0}".format(path))
-            path_parts = path.split('/')
-            logname = os.path.basename(path)
-
-            datestr = logname.\
-                replace('api.jujucharms.com.log-', '').\
-                replace('.anon.gz', '')
-
-            c = conn.cursor()
-            c.execute('''INSERT INTO loaded_logs (
-                        logfile, started, finished) VALUES (
-                        ?, ?, ?
-                        )''', ['/'.join([path_parts[-2], logname]),
-                               True,
-                               False])
-            conn.commit()
-
-            with gzip.open(path) as f:
-                for line in f:
-                    if '\n' == line[-1]:
-                        line = line[:-1]
-                    process_log_line(line, datestr, conn)
-            c.execute('''UPDATE loaded_logs
-                        SET finished=?
-                        WHERE logfile=?''',
-                      [True, path])
-        conn.commit()
+    load_logfiles()
 
 
 @cli.group(help="Grab latest data from the database.")

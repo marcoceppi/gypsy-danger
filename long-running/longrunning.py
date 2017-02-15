@@ -83,7 +83,7 @@ def load_logfiles():
             res = c.execute('''
                 SELECT * FROM loaded_logs
                 WHERE logfile = ?
-            ''', ['/'.join([path_parts[-2], logname]),])
+            ''', ['/'.join([path_parts[-2], logname]), ])
             found = res.fetchone()
 
             if found:

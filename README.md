@@ -15,14 +15,30 @@ need credentials to the charmstore logs via swift. These can be obtained by
 getting them created in enigma via an RT ticket.
 
 
-Steps to get the system setup for reporting:
+Getting setup
+~~~~
 
   make sysdeps
   make
   source ~/path/to/novarc/for/swift
+  source .venv/bin/activate
   make get-logs
   make _initdb
   make longrunning
+
+
+Loading new logs
+~~~~
+
+Once running you can download the latest log files and update your database
+with the following:
+
+  source ~/path/to/novarc/for/swift
+  source .venv/bin/activate
+  make get-logs
+  make updatedb
+  make longrunning
+
 
 
 make longrunning

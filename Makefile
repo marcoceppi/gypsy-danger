@@ -69,6 +69,10 @@ logs/api/2:
 _initdb: .venv
 	$(PY) long-running/longrunning.py initdb
 
+.PHONY: updatedb
+updatedb: .venv
+	$(PY) long-running/longrunning.py updatedb
+
 .PHONY: longrunning
 longrunning: .venv
 	$(PY) long-running/longrunning.py run summary

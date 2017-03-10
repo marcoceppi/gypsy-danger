@@ -31,6 +31,7 @@ sysdeps:
 	$(PIP) install click
 	$(PIP) install python-swiftclient
 	$(PIP) install python-keystoneclient
+	$(PIP) install jujubundlelib
 
 .PHONY: clean_venv
 clean_venv:

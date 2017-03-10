@@ -7,6 +7,10 @@ import os
 import re
 import sqlite3
 
+from collections import namedtuple
+from urllib.parse import unquote
+from jujubundlelib.references import Reference
+
 
 logs = [
     glob.glob('logs/api/1/api.jujucharms.com.log-201*'),
@@ -17,6 +21,8 @@ uuid_re = b'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'
 cloud_re = b'provider=[^,\"]*'
 region_re = b'cloud_region=[^,\"]*'
 version_re = b'controller_version=[^,\"]*'
+application_re = b'[&?]id=[^&,\"]*'
+channel_re = b'[&?]channel=[^&,\"]*'
 clouds = {}
 cloud_regions = {}
 versions = {}
@@ -25,6 +31,8 @@ running = {}
 
 DB_NAME = 'models.db'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+Application = namedtuple(
+        'Application', 'charmid, appname, series, owner, channel')
 
 
 def connect_sql():
@@ -40,6 +48,7 @@ def recreate_db():
     c.execute('DROP TABLE IF EXISTS models')
     c.execute('DROP TABLE IF EXISTS model_hits')
     c.execute('DROP TABLE IF EXISTS loaded_logs')
+    c.execute('DROP TABLE IF EXISTS application_hits')
     # Save (commit) the changes
     conn.commit()
 
@@ -61,6 +70,15 @@ def recreate_db():
         started boolean,
         finished boolean,
         PRIMARY KEY (logfile))''')
+    c.execute('''
+        CREATE TABLE application_hits (
+        uuid text,
+        charmid text,
+        appname text,
+        series text,
+        owner text,
+        channel integer,
+        day text)''')
 
     conn.commit()
 
@@ -139,6 +157,36 @@ def find_metadata(l):
     return (version, cloud, region)
 
 
+def find_application(l):
+    """Process a log line looking for the application id"""
+    # we also need to return a "root" id so we can tell how many of an
+    # application is out there regardless of the data.
+    # if the line has the environment_uuid then let's grab the application
+    # value(s)
+    charmid = None
+    series = None
+    channel = None
+    appname = None
+    owner = None
+    app_raw = re.search(application_re, l)
+    if app_raw:
+        _, charmid = app_raw.group().split(b'=')
+        charmid = unquote(charmid.decode("utf-8"))
+
+        # Use the jujubundlelib to parse the charm url for the series
+        ref = Reference.from_string(charmid)
+        series = ref.series
+        appname = ref.name
+        owner = ref.user if ref.user else None
+
+        channel_found = re.search(channel_re, l)
+        if channel_found:
+            _, channel = channel_found.group().split(b'=')
+
+    found = Application(charmid, appname, series, owner, channel)
+    return found
+
+
 def process_log_line(l, date, conn):
     uuid = find_uuid(l)
     c = conn.cursor()
@@ -153,6 +201,16 @@ def process_log_line(l, date, conn):
             c.execute('''
                 INSERT INTO models (uuid,version,cloud,region)
                 VALUES (?, ?, ?, ?);''', [uuid, meta[0], meta[1], meta[2]])
+
+            # load the application data if available
+            app = find_application(l)
+            c.execute('''
+                INSERT INTO application_hits (
+                    uuid,charmid,appname,series,owner,channel,day)
+                VALUES (?, ?, ?, ?, ?, ?, ?);''', [
+                    uuid, app.charmid, app.appname, app.series, app.owner,
+                    app.channel, date])
+
         c.execute('''
             INSERT OR REPLACE INTO model_hits (uuid,day)
             VALUES (?, ?);''', [uuid, date])

@@ -96,7 +96,8 @@ def load_logfiles():
 
             datestr = logname.\
                 replace('api.jujucharms.com.log-', '').\
-                replace('.anon.gz', '')
+                replace('.anon', '').\
+                replace('.gz', '')
 
             c = conn.cursor()
             res = c.execute('''
@@ -156,7 +157,9 @@ def find_metadata(l):
     if v:
         _, version = v.group().split(b'=')
 
-    return (version.decode('utf-8'), cloud.decode('utf-8'), region.decode('utf-8'))
+    return (version.decode('utf-8'),
+            cloud.decode('utf-8'),
+            region.decode('utf-8'))
 
 
 def find_application(l):

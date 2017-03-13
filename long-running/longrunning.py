@@ -78,7 +78,8 @@ def recreate_db():
         series text,
         owner text,
         channel integer,
-        day text)''')
+        day text,
+        PRIMARY KEY (uuid, charmid, day))''')
 
     conn.commit()
 
@@ -132,7 +133,8 @@ def find_uuid(l):
     m = re.search(uuid_re, l)
     if m:
         uuid = m.group(0)
-        return uuid.split(b'=')[1]
+        var = uuid.split(b'=')[1].decode('utf-8')
+        return var
     else:
         return None
 
@@ -154,7 +156,7 @@ def find_metadata(l):
     if v:
         _, version = v.group().split(b'=')
 
-    return (version, cloud, region)
+    return (version.decode('utf-8'), cloud.decode('utf-8'), region.decode('utf-8'))
 
 
 def find_application(l):
@@ -174,7 +176,11 @@ def find_application(l):
         charmid = unquote(charmid.decode("utf-8"))
 
         # Use the jujubundlelib to parse the charm url for the series
-        ref = Reference.from_string(charmid)
+        try:
+            ref = Reference.from_string(charmid)
+        except ValueError:
+            # skip things if there's an error parsing the charm url
+            return None
         series = ref.series
         appname = ref.name
         owner = ref.user if ref.user else None
@@ -182,6 +188,7 @@ def find_application(l):
         channel_found = re.search(channel_re, l)
         if channel_found:
             _, channel = channel_found.group().split(b'=')
+            channel = channel.decode('utf-8')
 
     found = Application(charmid, appname, series, owner, channel)
     return found
@@ -202,10 +209,13 @@ def process_log_line(l, date, conn):
                 INSERT INTO models (uuid,version,cloud,region)
                 VALUES (?, ?, ?, ?);''', [uuid, meta[0], meta[1], meta[2]])
 
-            # load the application data if available
-            app = find_application(l)
+        # There's multiple log lines, one for each charmid that's requested so
+        # we only load the uuid hit once, but we load the application found
+        # regardless of if there's a previous uuid row like above.
+        app = find_application(l)
+        if app:
             c.execute('''
-                INSERT INTO application_hits (
+                INSERT OR REPLACE INTO application_hits (
                     uuid,charmid,appname,series,owner,channel,day)
                 VALUES (?, ?, ?, ?, ?, ?, ?);''', [
                     uuid, app.charmid, app.appname, app.series, app.owner,
@@ -319,7 +329,7 @@ def output_latest_day_versions(conn):
     print("\n\n{} saw:".format(day))
     print("Count\tVersion")
     for row in versions:
-        print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
+        print("{0}\t{1}".format(row[0], row[1]))
 
 
 def output_latest_day_clouds(conn):
@@ -328,7 +338,7 @@ def output_latest_day_clouds(conn):
     print("\n\n{} saw:".format(day))
     print("Count\tCloud")
     for row in clouds:
-        print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
+        print("{0}\t{1}".format(row[0], row[1]))
 
 
 def output_latest_day_cloud_regions(conn):
@@ -339,9 +349,9 @@ def output_latest_day_cloud_regions(conn):
     cloud = None
     for row in clouds:
         if cloud != row[1]:
-            print('Cloud: ', row[1].decode('utf-8'))
+            print('Cloud: ', row[1])
             cloud = row[1]
-        print("\t{0}\t{1}".format(row[0], row[2].decode('utf-8')))
+        print("\t{0}\t{1}".format(row[0], row[2]))
 
 
 def output_model_ages(conn, day):

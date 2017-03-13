@@ -77,7 +77,7 @@ def recreate_db():
         appname text,
         series text,
         owner text,
-        channel integer,
+        channel text,
         day text,
         PRIMARY KEY (uuid, charmid, day))''')
 

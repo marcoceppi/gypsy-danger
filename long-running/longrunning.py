@@ -164,10 +164,8 @@ def find_metadata(l):
 
 def find_application(l):
     """Process a log line looking for the application id"""
-    # we also need to return a "root" id so we can tell how many of an
-    # application is out there regardless of the data.
-    # if the line has the environment_uuid then let's grab the application
-    # value(s)
+    # We also need to return a root "appname" so we can tell how many of an
+    # application is out there regardless of the owner/etc.
     charmid = None
     series = None
     channel = None

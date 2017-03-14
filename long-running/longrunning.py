@@ -7,6 +7,10 @@ import os
 import re
 import sqlite3
 
+from collections import namedtuple
+from jujubundlelib.references import Reference
+from urllib.parse import unquote
+
 
 logs = [
     glob.glob('logs/api/1/api.jujucharms.com.log-201*'),
@@ -17,6 +21,8 @@ uuid_re = b'environment_uuid=[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}'
 cloud_re = b'provider=[^,\"]*'
 region_re = b'cloud_region=[^,\"]*'
 version_re = b'controller_version=[^,\"]*'
+application_re = b'[&?]id=[^&,\"]*'
+channel_re = b'[&?]channel=[^&,\"]*'
 clouds = {}
 cloud_regions = {}
 versions = {}
@@ -25,6 +31,8 @@ running = {}
 
 DB_NAME = 'models.db'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+Application = namedtuple(
+        'Application', 'charmid, appname, series, owner, channel')
 
 
 def connect_sql():
@@ -40,6 +48,7 @@ def recreate_db():
     c.execute('DROP TABLE IF EXISTS models')
     c.execute('DROP TABLE IF EXISTS model_hits')
     c.execute('DROP TABLE IF EXISTS loaded_logs')
+    c.execute('DROP TABLE IF EXISTS application_hits')
     # Save (commit) the changes
     conn.commit()
 
@@ -61,13 +70,23 @@ def recreate_db():
         started boolean,
         finished boolean,
         PRIMARY KEY (logfile))''')
+    c.execute('''
+        CREATE TABLE application_hits (
+        uuid text,
+        charmid text,
+        appname text,
+        series text,
+        owner text,
+        channel text,
+        day text,
+        PRIMARY KEY (uuid, charmid, day))''')
 
     conn.commit()
 
 
 def load_logfiles():
     conn = connect_sql()
-
+    logs.sort()
     for g in logs:
         print("Found logs {0}".format(len(g)))
         for path in g:
@@ -77,7 +96,8 @@ def load_logfiles():
 
             datestr = logname.\
                 replace('api.jujucharms.com.log-', '').\
-                replace('.anon.gz', '')
+                replace('.anon', '').\
+                replace('.gz', '')
 
             c = conn.cursor()
             res = c.execute('''
@@ -114,7 +134,10 @@ def find_uuid(l):
     m = re.search(uuid_re, l)
     if m:
         uuid = m.group(0)
-        return uuid.split(b'=')[1]
+        # Make sure to decode the uuid or else sqlite won't be able to filter
+        # it in bytes.
+        var = uuid.split(b'=')[1].decode('utf-8')
+        return var
     else:
         return None
 
@@ -136,7 +159,43 @@ def find_metadata(l):
     if v:
         _, version = v.group().split(b'=')
 
-    return (version, cloud, region)
+    return (version.decode('utf-8'),
+            cloud.decode('utf-8'),
+            region.decode('utf-8'))
+
+
+def find_application(l):
+    """Process a log line looking for the application id"""
+    # We also need to return a root "appname" so we can tell how many of an
+    # application is out there regardless of the owner/etc.
+    charmid = None
+    series = None
+    channel = None
+    appname = None
+    owner = None
+    app_raw = re.search(application_re, l)
+    if app_raw:
+        _, charmid = app_raw.group().split(b'=')
+        charmid = unquote(charmid.decode("utf-8"))
+
+        # Use the jujubundlelib to parse the charm url for the series
+        try:
+            ref = Reference.from_string(charmid)
+        except ValueError:
+            # skip things if there's an error parsing the charm url
+            print ('Could not properly parse: {}'.format(charmid))
+            return None
+        series = ref.series
+        appname = ref.name
+        owner = ref.user if ref.user else None
+
+        channel_found = re.search(channel_re, l)
+        if channel_found:
+            _, channel = channel_found.group().split(b'=')
+            channel = channel.decode('utf-8')
+
+    found = Application(charmid, appname, series, owner, channel)
+    return found
 
 
 def process_log_line(l, date, conn):
@@ -153,6 +212,19 @@ def process_log_line(l, date, conn):
             c.execute('''
                 INSERT INTO models (uuid,version,cloud,region)
                 VALUES (?, ?, ?, ?);''', [uuid, meta[0], meta[1], meta[2]])
+
+        # There's multiple log lines, one for each charmid that's requested so
+        # we only load the uuid hit once, but we load the application found
+        # regardless of if there's a previous uuid row like above.
+        app = find_application(l)
+        if app:
+            c.execute('''
+                INSERT OR REPLACE INTO application_hits (
+                    uuid,charmid,appname,series,owner,channel,day)
+                VALUES (?, ?, ?, ?, ?, ?, ?);''', [
+                    uuid, app.charmid, app.appname, app.series, app.owner,
+                    app.channel, date])
+
         c.execute('''
             INSERT OR REPLACE INTO model_hits (uuid,day)
             VALUES (?, ?);''', [uuid, date])
@@ -261,7 +333,7 @@ def output_latest_day_versions(conn):
     print("\n\n{} saw:".format(day))
     print("Count\tVersion")
     for row in versions:
-        print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
+        print("{0}\t{1}".format(row[0], row[1]))
 
 
 def output_latest_day_clouds(conn):
@@ -270,7 +342,7 @@ def output_latest_day_clouds(conn):
     print("\n\n{} saw:".format(day))
     print("Count\tCloud")
     for row in clouds:
-        print("{0}\t{1}".format(row[0], row[1].decode('utf-8')))
+        print("{0}\t{1}".format(row[0], row[1]))
 
 
 def output_latest_day_cloud_regions(conn):
@@ -281,9 +353,9 @@ def output_latest_day_cloud_regions(conn):
     cloud = None
     for row in clouds:
         if cloud != row[1]:
-            print('Cloud: ', row[1].decode('utf-8'))
+            print('Cloud: ', row[1])
             cloud = row[1]
-        print("\t{0}\t{1}".format(row[0], row[2].decode('utf-8')))
+        print("\t{0}\t{1}".format(row[0], row[2]))
 
 
 def output_model_ages(conn, day):

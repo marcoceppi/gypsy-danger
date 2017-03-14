@@ -8,8 +8,8 @@ import re
 import sqlite3
 
 from collections import namedtuple
-from urllib.parse import unquote
 from jujubundlelib.references import Reference
+from urllib.parse import unquote
 
 
 logs = [
@@ -86,7 +86,7 @@ def recreate_db():
 
 def load_logfiles():
     conn = connect_sql()
-
+    logs.sort()
     for g in logs:
         print("Found logs {0}".format(len(g)))
         for path in g:
@@ -134,6 +134,8 @@ def find_uuid(l):
     m = re.search(uuid_re, l)
     if m:
         uuid = m.group(0)
+        # Make sure to decode the uuid or else sqlite won't be able to filter
+        # it in bytes.
         var = uuid.split(b'=')[1].decode('utf-8')
         return var
     else:
@@ -181,6 +183,7 @@ def find_application(l):
             ref = Reference.from_string(charmid)
         except ValueError:
             # skip things if there's an error parsing the charm url
+            print ('Could not properly parse: {}'.format(charmid))
             return None
         series = ref.series
         appname = ref.name

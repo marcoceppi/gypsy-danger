@@ -1,2 +1,5 @@
 logs/api
 logs/list
+.venv
+models.db
+models.db-journal

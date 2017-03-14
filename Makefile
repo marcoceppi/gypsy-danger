@@ -35,7 +35,7 @@ sysdeps:
 
 .PHONY: clean_venv
 clean_venv:
-	rm -rf bin include lib local man share
+	rm -rf .venv
 
 
 .venv/bin/flake8: .venv

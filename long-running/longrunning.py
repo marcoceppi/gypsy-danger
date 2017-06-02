@@ -56,13 +56,13 @@ def recreate_db():
     c.execute('''
         CREATE TABLE models (
         uuid text PRIMARY KEY,
-        version text,
         cloud text,
         region text)''')
     c.execute('''
         CREATE TABLE model_hits (
         uuid text,
         day text,
+        version text,
         PRIMARY KEY (uuid, day))''')
     c.execute('''
         CREATE TABLE loaded_logs (
@@ -206,12 +206,12 @@ def process_log_line(l, date, conn):
         c.execute('SELECT uuid FROM models where uuid=?', [uuid])
         row = c.fetchone()
 
+        meta = find_metadata(l)
         if not row:
-            meta = find_metadata(l)
             # Add this as a first entry for this model uuid
             c.execute('''
-                INSERT INTO models (uuid,version,cloud,region)
-                VALUES (?, ?, ?, ?);''', [uuid, meta[0], meta[1], meta[2]])
+                INSERT INTO models (uuid,cloud,region)
+                VALUES (?, ?, ?);''', [uuid, meta[1], meta[2]])
 
         # There's multiple log lines, one for each charmid that's requested so
         # we only load the uuid hit once, but we load the application found
@@ -226,8 +226,8 @@ def process_log_line(l, date, conn):
                     app.channel, date])
 
         c.execute('''
-            INSERT OR REPLACE INTO model_hits (uuid,day)
-            VALUES (?, ?);''', [uuid, date])
+            INSERT OR REPLACE INTO model_hits (uuid, version, day)
+            VALUES (?, ?, ?);''', [uuid, meta[0], date])
 
 
 def count_uuids(conn, day=None):
@@ -251,7 +251,8 @@ def count_versions(conn, day=None):
         add_and = 'AND model_hits.day=?'
 
     sql = """
-        SELECT COUNT(models.uuid), version from models
+        SELECT COUNT(models.uuid), version
+        from models
         INNER JOIN model_hits
         WHERE models.uuid=model_hits.uuid {}
         GROUP BY version

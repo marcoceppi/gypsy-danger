@@ -32,7 +32,7 @@ running = {}
 DB_NAME = 'models.db'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 Application = namedtuple(
-        'Application', 'charmid, appname, series, owner, channel')
+    'Application', 'charmid, appname, series, owner, channel')
 
 
 def connect_sql():
@@ -222,8 +222,8 @@ def process_log_line(l, date, conn):
                 INSERT OR REPLACE INTO application_hits (
                     uuid,charmid,appname,series,owner,channel,day)
                 VALUES (?, ?, ?, ?, ?, ?, ?);''', [
-                    uuid, app.charmid, app.appname, app.series, app.owner,
-                    app.channel, date])
+                uuid, app.charmid, app.appname, app.series, app.owner,
+                app.channel, date])
 
         c.execute('''
             INSERT OR REPLACE INTO model_hits (uuid, version, day)

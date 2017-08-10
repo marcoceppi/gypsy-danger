@@ -27,11 +27,12 @@ sysdeps:
 .venv: .venv/bin/python
 .venv/bin/python:
 	# needs python3-dev to build keystoneclient deps
-	virtualenv -p /usr/bin/python3 .venv
+	virtualenv -p /usr/local/bin/python3 .venv
 	$(PIP) install click
 	$(PIP) install python-swiftclient
 	$(PIP) install python-keystoneclient
 	$(PIP) install jujubundlelib
+	$(PIP) install psycopg2
 
 .PHONY: clean_venv
 clean_venv:
@@ -48,10 +49,10 @@ lint: .venv/bin/flake8
 ###
 # Long running setup
 ###
-check-swift:
-ifndef NOVA_USERNAME
-    $(error NOVA_USERNAME is undefined, source your swift cred file.)
-endif
+# check-swift:
+# ifndef NOVA_USERNAME
+#     $(error NOVA_USERNAME is undefined, source your swift cred file.)
+# endif
 
 .PHONY: get-logs
 get-logs: .venv logs/api/1 logs/api/2 check-swift

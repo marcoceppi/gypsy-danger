@@ -53,7 +53,7 @@ lint: .venv/bin/flake8
 ##
 
 .PHONY: get-logs
-get-logs: .venv logs/api/1 logs/api/2 check-swift
+get-logs: .venv logs/api/1 logs/api/2
 	ifndef NOVA_USERNAME
 		$(error NOVA_USERNAME is undefined, source your swift cred file.)
 	endif

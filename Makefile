@@ -1,6 +1,7 @@
 # Makefile to help automate tasks
 WD := $(shell pwd)
 PY := .venv/bin/python
+SYSPY := $(shell which python3)
 PIP := .venv/bin/pip
 PEP8 := .venv/bin/pep8
 PYTEST := .venv/bin/py.test
@@ -21,18 +22,18 @@ clean-all: clean_venv
 
 
 sysdeps:
-	sudo apt-get install python3-dev
+	sudo apt-get install python3-dev python3-virtualenv
 
 
 .venv: .venv/bin/python
 .venv/bin/python:
 	# needs python3-dev to build keystoneclient deps
-	virtualenv -p /usr/local/bin/python3 .venv
+	python3 -m virtualenv -p $(SYSPY) .venv
 	$(PIP) install click
 	$(PIP) install python-swiftclient
 	$(PIP) install python-keystoneclient
 	$(PIP) install jujubundlelib
-	$(PIP) install psycopg2
+	$(PIP) install PyMySQL
 
 .PHONY: clean_venv
 clean_venv:

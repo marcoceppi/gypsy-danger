@@ -140,7 +140,8 @@ def load_logfiles(conn):
                             if c.fetchone() is None:
                                 # Add this as a first entry for this model uuid
                                 c.execute('''
-                                    INSERT IGNORE INTO models (uuid,cloud,region)
+                                    INSERT IGNORE INTO models
+                                        (uuid,cloud,region)
                                     VALUES (%s, %s, %s)
                                     ''', [hit.uuid,
                                           hit.Metadata.cloud,
@@ -148,7 +149,8 @@ def load_logfiles(conn):
 
                             if (hit.uuid, hit.date) not in model_hits:
                                 c.execute('''
-                                    INSERT IGNORE INTO model_hits (uuid, version, day)
+                                    INSERT IGNORE INTO model_hits
+                                        (uuid, version, day)
                                     VALUES (%s, %s, %s)
                                     ''', [
                                     hit.uuid,
@@ -197,6 +199,11 @@ def cli():
               prompt='Your passwd',
               help='The postgres user password')
 def updatedb(*args, **kwargs):
+    """
+        Update the db with the log files in /logs/api/xxxx
+        To get the MySQL charm password:
+        sudo cat /var/lib/mysql/mysql.passwd
+    """
     host = kwargs.get('host', None)
     username = 'root'
     passwd = kwargs.get('passwd', None)
@@ -217,7 +224,6 @@ def initdb(*args, **kwargs):
     passwd = '2bc933ae-38e2-4606-a5a0-35a814ab9f5f'
     conn = connect_sql(host, username, passwd)
     recreate_db(conn)
-    load_logfiles(conn)
     conn.close()
 
 

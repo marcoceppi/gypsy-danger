@@ -1,5 +1,6 @@
 # Makefile to help automate tasks
 WD := $(shell pwd)
+PLATFORM=$(shell uname -s)
 PY := .venv/bin/python
 SYSPY := $(shell which python3)
 PIP := .venv/bin/pip
@@ -47,16 +48,15 @@ lint: .venv/bin/flake8
 	$(FLAKE8) long-running
 
 
-###
-# Long running setup
-###
-# check-swift:
-# ifndef NOVA_USERNAME
-#     $(error NOVA_USERNAME is undefined, source your swift cred file.)
-# endif
+##
+## Long running setup
+##
 
 .PHONY: get-logs
 get-logs: .venv logs/api/1 logs/api/2 check-swift
+	ifndef NOVA_USERNAME
+		$(error NOVA_USERNAME is undefined, source your swift cred file.)
+	endif
 	swift list production-juju-ps45-cdo-jujucharms-machine-1.canonical.com | grep  201 | grep api.jujucharms.com.log > logs/api/logs1.list
 	swift list production-juju-ps45-cdo-jujucharms-machine-2.canonical.com | grep 201 | grep api.jujucharms.com.log > logs/api/logs2.list
 	echo "Downloading log files using get.sh"
@@ -70,6 +70,7 @@ logs/api/2:
 
 .PHONY: _initdb
 _initdb: .venv
+
 	$(PY) long-running/longrunning.py initdb
 
 .PHONY: updatedb
